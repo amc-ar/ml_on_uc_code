@@ -1,0 +1,187 @@
+---
+# cifarmodeltest_400k for MAX78000 (conv9 = 1x1 for kernel-mem fit).
+# All residual element-wise adds are STANDALONE layers (operation: none) so they
+# are never fused into a biased conv -- required for the multi-pass (96ch) block
+# and valid for the 64ch blocks. Two ping-pong buffers: A = 0x0000, B = 0x4000.
+
+arch: cifarmodeltest_400k
+dataset: CIFAR10
+
+layers:
+  # Layer 0 - conv1 (3->32)
+  - name: conv1
+    data_format: HWC
+    processors: 0x0000000000000007
+    in_offset: 0x0000
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+
+  # Layer 1 - conv2 (skip1 source, 32->64); input is 32ch -> 32 processors
+  - name: conv2
+    in_offset: 0x4000
+    processors: 0x00000000ffffffff
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+
+  # Layer 2 - reform skip1
+  - name: gap_conv2
+    in_offset: 0x0000
+    processors: 0xffffffffffffffff
+    out_offset: 0x4000
+    op: Passthrough
+    write_gap: 1
+
+  # Layer 3 - conv3 (main1, 64->64)
+  - name: conv3
+    in_sequences: [conv2]
+    in_offset: 0x0000
+    processors: 0xffffffffffffffff
+    out_offset: 0x4004
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    write_gap: 1
+
+  # Layer 4 - resid1 add (standalone)
+  - name: resid1_add
+    in_sequences: [gap_conv2, conv3]
+    in_offset: 0x4000
+    processors: 0xffffffffffffffff
+    out_offset: 0x0000
+    operation: none
+    eltwise: add
+
+  # Layer 5 - conv4 (pool + 64->64, skip2 source)
+  - name: conv4
+    in_sequences: [resid1_add]
+    in_offset: 0x0000
+    processors: 0xffffffffffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    max_pool: 2
+    pool_stride: 2
+
+  # Layer 6 - reform skip2
+  - name: gap_conv4
+    in_offset: 0x4000
+    processors: 0xffffffffffffffff
+    out_offset: 0x0000
+    op: Passthrough
+    write_gap: 1
+
+  # Layer 7 - conv5 (main2, 64->64)
+  - name: conv5
+    in_sequences: [conv4]
+    in_offset: 0x4000
+    processors: 0xffffffffffffffff
+    out_offset: 0x0004
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    write_gap: 1
+
+  # Layer 8 - resid2 add (standalone)
+  - name: resid2_add
+    in_sequences: [gap_conv4, conv5]
+    in_offset: 0x0000
+    processors: 0xffffffffffffffff
+    out_offset: 0x4000
+    operation: none
+    eltwise: add
+
+  # Layer 9 - conv7 (pool + 64->96)
+  - name: conv7
+    in_sequences: [resid2_add]
+    in_offset: 0x4000
+    processors: 0xffffffffffffffff
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    max_pool: 2
+    pool_stride: 2
+
+  # Layer 10 - conv8 (skip3 source, 96->96)
+  - name: conv8
+    in_offset: 0x0000
+    processors: 0x0000ffffffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+
+  # Layer 11 - reform skip3
+  - name: gap_conv8
+    in_offset: 0x4000
+    processors: 0x0000ffffffffffff
+    out_offset: 0x0000
+    op: Passthrough
+    write_gap: 1
+
+  # Layer 12 - conv9 (main3, 1x1, 96->96)
+  - name: conv9
+    in_sequences: [conv8]
+    in_offset: 0x4000
+    processors: 0x0000ffffffffffff
+    out_offset: 0x0004
+    op: Conv2d
+    kernel_size: 1x1
+    pad: 0
+    activate: Relu
+    write_gap: 1
+
+  # Layer 13 - resid3 add (standalone; multi-pass eltwise must not fuse with conv)
+  - name: resid3_add
+    in_sequences: [gap_conv8, conv9]
+    in_offset: 0x0000
+    processors: 0x0000ffffffffffff
+    out_offset: 0x4000
+    operation: none
+    eltwise: add
+
+  # Layer 14 - conv10 (96->32)
+  - name: conv10
+    in_sequences: [resid3_add]
+    in_offset: 0x4000
+    processors: 0x0000ffffffffffff
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+
+  # Layer 15 - conv11 (global maxpool, 32->32)
+  - name: conv11
+    in_offset: 0x0000
+    processors: 0x00000000ffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 1x1
+    pad: 0
+    activate: Relu
+    max_pool: 8
+    pool_stride: 8
+
+  # Layer 16 - classifier (32->10)
+  - name: classifier
+    in_offset: 0x4000
+    processors: 0xffffffff00000000
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 1x1
+    pad: 0
+    output_width: 32
+    activate: None

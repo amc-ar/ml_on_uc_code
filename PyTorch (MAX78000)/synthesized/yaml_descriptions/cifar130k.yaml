@@ -1,0 +1,112 @@
+---
+# YAML template -- requires manual editing, particularly with regard to out_offset and processors
+# Generated for MAX78000 with input format CHW
+
+arch: cifarmodeltest
+dataset: CIFAR10
+
+layers:
+  # Layer 0
+  - name: conv1_Conv_8  # conv1_Conv_8 fused with conv1.activate
+    # input shape: (3, 32, 32)
+    data_format: HWC
+    processors: 0x0000000000000111
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (32, 32, 32)
+
+  # Layer 1
+  - name: conv2_Conv_6  # conv2_Conv_6 fused with conv2.activate
+    # input shape: (32, 32, 32)
+    processors: 0x00000ffffffff000
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (64, 32, 32)
+
+  # Layer 2
+  - name: conv3_Conv_6  # conv3_Conv_6 fused with conv3.activate
+    # input shape: (64, 32, 32)
+    processors: 0xffffffffffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (64, 32, 32)
+
+  # Layer 3
+  - name: conv4_Conv_6  # conv4_Conv_6 fused with conv4.activate
+    # input shape: (64, 32, 32)
+    processors: 0xffffffffffffffff
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (48, 32, 32)
+
+  # Layer 4
+  - name: conv5_Conv_6  # conv5_Conv_6 fused with conv5.activate
+    # input shape: (48, 32, 32)
+    processors: 0x0000ffffffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (48, 32, 32)
+
+  # Layer 5
+  - name: conv6_Conv_6  # conv6_Conv_6 fused with conv6.activate
+    # input shape: (48, 32, 32)
+    processors: 0x0000ffffffffffff
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    # output shape: (32, 32, 32)
+
+  # Layer 6
+  - name: conv7_Conv_6  # conv7.pool and conv7_Conv_6 fused with conv7.activate
+    # input shape: (32, 32, 32)
+    processors: 0x00000000ffffffff
+    out_offset: 0x4000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    max_pool: 2
+    pool_stride: 2
+    pool_dilation: [1, 1]
+    # output shape: (16, 16, 16)
+
+  # Layer 7
+  - name: conv8_Conv_6  # conv8.pool and conv8_Conv_6 fused with conv8.activate
+    # input shape: (16, 16, 16)
+    processors: 0x0000ffff00000000
+    out_offset: 0x0000
+    op: Conv2d
+    kernel_size: 3x3
+    pad: 1
+    activate: Relu
+    max_pool: 2
+    pool_stride: 2
+    pool_dilation: [1, 1]
+    # output shape: (8, 8, 8)
+
+  # Layer 8
+  - name: fc_MatMul_3
+    # input shape: (8, 8, 8)
+    processors: 0x0000000000000ff0
+    out_offset: 0x4000
+    op: Linear
+    flatten: true
+    activate: None
+    # output shape: (10,)

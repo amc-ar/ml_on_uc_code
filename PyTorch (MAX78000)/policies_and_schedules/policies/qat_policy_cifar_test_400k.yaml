@@ -1,0 +1,4 @@
+---
+# Delay QAT for larger student (FP32+KD through epoch 149).
+start_epoch: 150
+weight_bits: 8
